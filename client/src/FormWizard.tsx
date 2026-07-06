@@ -5,6 +5,7 @@ import { submissionSchema, emptySubmission, type Submission } from "@undp-crisis
 import { STEPS, firstStepIndexForSection } from "./form/steps";
 import { ProgressBar } from "./components/ProgressBar";
 import { SubmittedScreen } from "./SubmittedScreen";
+import { apiUrl, resolveApiUrl } from "./apiBase";
 
 interface SubmitResult {
   id: string;
@@ -62,7 +63,7 @@ export function FormWizard() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/submit", {
+      const res = await fetch(apiUrl("/api/submit"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(methods.getValues()),
@@ -81,7 +82,13 @@ export function FormWizard() {
   }
 
   if (result) {
-    return <SubmittedScreen country={methods.getValues("meta.country")} pdfUrl={result.pdfUrl} emailSent={result.emailSent} />;
+    return (
+      <SubmittedScreen
+        country={methods.getValues("meta.country")}
+        pdfUrl={resolveApiUrl(result.pdfUrl)}
+        emailSent={result.emailSent}
+      />
+    );
   }
 
   const StepComponent = step.Component;
