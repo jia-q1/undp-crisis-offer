@@ -1,0 +1,24 @@
+{
+  "name": "undp-crisis-offer",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "api",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run build --workspace=shared && concurrently -n shared,api,client -c blue,green,magenta \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:client\"",
+    "dev:shared": "npm run dev --workspace=shared",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:api": "npm run dev --workspace=api",
+    "build:client": "npm run build --workspace=client",
+    "build:api": "npm run build --workspace=api",
+    "build": "npm run build --workspace=shared && npm run build:client && npm run build:api",
+    "db:migrate": "npm run db:migrate --workspace=api",
+    "db:studio": "npm run db:studio --workspace=api"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

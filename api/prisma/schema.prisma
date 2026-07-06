@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PdfStorageBackend {
+  POSTGRES
+  SHAREPOINT
+}
+
+model Submission {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Flattened fields kept queryable without touching the JSON blob.
+  country            String
+  submittedByName    String
+  submittedByRole    String
+  submittedByEmail   String
+  totalAmountUsdMillions Float
+
+  // Full form payload, exactly as validated by the shared zod schema.
+  data Json
+
+  // PDF storage
+  pdfStorageBackend PdfStorageBackend @default(POSTGRES)
+  pdfBytes          Bytes?            // used when backend = POSTGRES
+  pdfSharePointUrl  String?           // used when backend = SHAREPOINT
+  pdfFileName       String
+
+  emailSentAt DateTime?
+
+  @@index([country])
+  @@index([createdAt])
+}
