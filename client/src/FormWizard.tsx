@@ -3,7 +3,10 @@ import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { submissionSchema, emptySubmission, type Submission } from "@undp-crisis-offer/shared";
 import { STEPS, firstStepIndexForSection } from "./form/steps";
+import { SECTIONS } from "./form/sections";
 import { ProgressBar } from "./components/ProgressBar";
+import { ReferencePanel } from "./components/ReferencePanel";
+import { hasReference } from "./form/referenceContent";
 import { SubmittedScreen } from "./SubmittedScreen";
 import { apiUrl, resolveApiUrl } from "./apiBase";
 
@@ -92,38 +95,48 @@ export function FormWizard() {
   }
 
   const StepComponent = step.Component;
+  const sectionLabel = SECTIONS.find((s) => s.id === step.sectionId)?.label;
 
   return (
     <FormProvider {...methods}>
       <ProgressBar currentSectionId={step.sectionId} percent={percent} maxStepIndex={maxStepIndex} onSectionClick={goToSection} />
-      <div className="mx-auto max-w-4xl px-6 pb-32 pt-10">
-        <h1 className="mb-2 text-3xl font-bold text-un-navy">{step.heading}</h1>
-        {step.helper && <p className="mb-7 text-base text-slate-500">{step.helper}</p>}
-        {!step.helper && <div className="mb-7" />}
-        <StepComponent />
+      <div className="mx-auto flex max-w-7xl gap-8 px-6 pb-32 pt-10">
+        <div className="min-w-0 flex-1">
+          {sectionLabel && (
+            <p className="mb-1.5 text-sm font-semibold uppercase tracking-wide text-un-blue-dark">{sectionLabel}</p>
+          )}
+          <h1 className="mb-2 text-3xl font-bold text-un-navy">{step.heading}</h1>
+          {step.helper && <p className="mb-7 text-base text-slate-500">{step.helper}</p>}
+          {!step.helper && <div className="mb-7" />}
+          <StepComponent />
+        </div>
+        <ReferencePanel stepId={step.id} />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <button
-            type="button"
-            onClick={goBack}
-            disabled={stepIndex === 0 || submitting}
-            className="rounded-lg px-5 py-3 text-base font-medium text-slate-500 transition hover:text-un-navy disabled:opacity-0"
-          >
-            Back
-          </button>
-          <div className="flex items-center gap-4">
-            {submitError && <span className="text-sm font-medium text-rose-600">{submitError}</span>}
+        <div className="mx-auto flex max-w-7xl gap-8 px-6 py-5">
+          <div className="flex flex-1 items-center justify-between">
             <button
               type="button"
-              onClick={goNext}
-              disabled={submitting}
-              className="rounded-lg bg-un-blue px-7 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-un-blue-dark disabled:opacity-60"
+              onClick={goBack}
+              disabled={stepIndex === 0 || submitting}
+              className="rounded-lg px-5 py-3 text-base font-medium text-slate-500 transition hover:text-un-navy disabled:opacity-0"
             >
-              {submitting ? "Submitting…" : isLastStep ? "Submit" : "Next"}
+              Back
             </button>
+            <div className="flex items-center gap-4">
+              {submitError && <span className="text-sm font-medium text-rose-600">{submitError}</span>}
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={submitting}
+                className="rounded-lg bg-un-blue px-7 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-un-blue-dark disabled:opacity-60"
+              >
+                {submitting ? "Submitting…" : isLastStep ? "Submit" : "Next"}
+              </button>
+            </div>
           </div>
+          {hasReference(step.id) && <div className="hidden w-[320px] shrink-0 lg:block" />}
         </div>
       </div>
     </FormProvider>

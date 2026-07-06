@@ -110,10 +110,7 @@ export function ReviewStep() {
         {submission.returnOnInvestment?.outcomeGroups?.map((group, i) => (
           <div key={i} className="mt-3">
             <p className="font-medium text-un-blue-dark">{group.title}</p>
-            {group.roiHighlight && <p className="italic text-slate-600">Return on investment: {group.roiHighlight}</p>}
-            <ul className="list-disc space-y-1 pl-5">
-              {group.bullets?.map((b, j) => <li key={j}>{b}</li>)}
-            </ul>
+            <p className="whitespace-pre-wrap">{group.points}</p>
           </div>
         ))}
       </ReviewSection>

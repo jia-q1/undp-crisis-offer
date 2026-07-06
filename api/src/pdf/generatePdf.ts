@@ -1,6 +1,10 @@
+import fs from "fs";
+import path from "path";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { OFFER_MATRIX, Submission, computeInvestmentTotals } from "@undp-crisis-offer/shared";
 import { PdfLayout } from "./layout";
+
+const CCAA_IMAGE_PATH = path.join(__dirname, "assets", "CCAA.png");
 
 export async function generateSubmissionPdf(submission: Submission): Promise<Buffer> {
   const doc = await PDFDocument.create();
@@ -9,8 +13,12 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
 
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const ccaaImageBytes = fs.readFileSync(CCAA_IMAGE_PATH);
+  const ccaaImage = await doc.embedPng(ccaaImageBytes);
+
   const layout = new PdfLayout(doc, { regular, bold });
 
+  layout.headerImage(ccaaImage);
   layout.title(`${submission.meta.country} – Investing Beyond Crisis`);
   layout.paragraph(
     `Submitted by ${submission.meta.submittedByName}, ${submission.meta.submittedByRole} (${submission.meta.submittedByEmail})`,
@@ -23,8 +31,8 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
   layout.paragraph(submission.situation.challenge);
 
   layout.subHeading("At a glance");
-  for (const stat of submission.situation.realityCheck) {
-    layout.bullet(stat.headline, stat.detail);
+  for (const indicator of submission.situation.realityCheck) {
+    layout.bullet(indicator.headline, indicator.detail);
   }
 
   layout.subHeading("Results speak for themselves");
@@ -69,12 +77,7 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
   layout.paragraph(submission.returnOnInvestment.overallImpact);
   for (const group of submission.returnOnInvestment.outcomeGroups) {
     layout.subHeading(group.title);
-    if (group.roiHighlight) {
-      layout.paragraph(`Return on investment: ${group.roiHighlight}`, { size: 10.5 });
-    }
-    for (const bullet of group.bullets) {
-      layout.simpleBullet(bullet);
-    }
+    layout.paragraph(group.points);
   }
   if (submission.returnOnInvestment.closingStatement) {
     layout.paragraph(submission.returnOnInvestment.closingStatement);

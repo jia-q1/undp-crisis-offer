@@ -1,4 +1,4 @@
-import { PDFDocument, PDFFont, PDFPage, rgb, RGB } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb, RGB } from "pdf-lib";
 
 export const COLORS = {
   unBlue: rgb(0, 0.6196, 0.8588), // #009EDB
@@ -78,6 +78,16 @@ export class PdfLayout {
 
   spacer(height: number) {
     this.y -= height;
+  }
+
+  headerImage(image: PDFImage, maxHeight = 90) {
+    const scale = Math.min(CONTENT_WIDTH / image.width, maxHeight / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    this.ensureSpace(height);
+    const x = MARGIN + (CONTENT_WIDTH - width) / 2;
+    this.page.drawImage(image, { x, y: this.y - height, width, height });
+    this.spacer(height + 20);
   }
 
   title(text: string) {

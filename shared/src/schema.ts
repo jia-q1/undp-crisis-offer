@@ -13,7 +13,18 @@ export const OFFER_MATRIX = [
   { phase: "Respond and Recover", pillar: "Livelihoods, jobs and economies" },
 ] as const;
 
-const statItemSchema = z.object({
+export function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function longText(maxWords: number) {
+  return z
+    .string()
+    .min(1, "Required")
+    .refine((val) => countWords(val) <= maxWords, { message: `Keep this under ${maxWords} words` });
+}
+
+const indicatorItemSchema = z.object({
   headline: z.string().min(1, "Required"),
   detail: z.string().min(1, "Required"),
 });
@@ -25,8 +36,7 @@ const offerBlockSchema = z.object({
 
 const outcomeGroupSchema = z.object({
   title: z.string().min(1, "Required"),
-  roiHighlight: z.string().optional().default(""),
-  bullets: z.array(z.string().min(1)).min(1, "Add at least one point"),
+  points: z.string().min(1, "Required"),
 });
 
 export const submissionSchema = z.object({
@@ -38,17 +48,17 @@ export const submissionSchema = z.object({
   }),
 
   situation: z.object({
-    challenge: z.string().min(1, "Required"),
-    realityCheck: z.array(statItemSchema).min(1, "Add at least one stat"),
-    results: z.array(statItemSchema).min(1, "Add at least one result"),
+    challenge: longText(500),
+    realityCheck: z.array(indicatorItemSchema).min(3, "Add at least 3 indicators").max(6, "Add at most 6 indicators"),
+    results: z.array(indicatorItemSchema).min(3, "Add at least 3 results").max(6, "Add at most 6 results"),
   }),
 
   advantage: z.object({
-    narrative: z.string().min(1, "Required"),
+    narrative: longText(500),
   }),
 
   offer: z.object({
-    intro: z.string().min(1, "Required"),
+    intro: longText(500),
     blocks: z.tuple([offerBlockSchema, offerBlockSchema, offerBlockSchema, offerBlockSchema]),
   }),
 
@@ -68,8 +78,8 @@ export const submissionSchema = z.object({
   }),
 
   returnOnInvestment: z.object({
-    overallImpact: z.string().min(1, "Required"),
-    outcomeGroups: z.array(outcomeGroupSchema).min(1, "Add at least one outcome group"),
+    overallImpact: longText(500),
+    outcomeGroups: z.array(outcomeGroupSchema).min(1, "Add at least one return on investment"),
     closingStatement: z.string().optional().default(""),
   }),
 
@@ -81,7 +91,7 @@ export const submissionSchema = z.object({
 });
 
 export type Submission = z.infer<typeof submissionSchema>;
-export type StatItem = z.infer<typeof statItemSchema>;
+export type IndicatorItem = z.infer<typeof indicatorItemSchema>;
 export type OfferBlock = z.infer<typeof offerBlockSchema>;
 export type OutcomeGroup = z.infer<typeof outcomeGroupSchema>;
 
@@ -96,7 +106,19 @@ export function computeInvestmentTotals(investment: Submission["investment"]) {
 
 export const emptySubmission: Submission = {
   meta: { country: "", submittedByName: "", submittedByRole: "", submittedByEmail: "" },
-  situation: { challenge: "", realityCheck: [], results: [] },
+  situation: {
+    challenge: "",
+    realityCheck: [
+      { headline: "", detail: "" },
+      { headline: "", detail: "" },
+      { headline: "", detail: "" },
+    ],
+    results: [
+      { headline: "", detail: "" },
+      { headline: "", detail: "" },
+      { headline: "", detail: "" },
+    ],
+  },
   advantage: { narrative: "" },
   offer: {
     intro: "",
@@ -121,6 +143,6 @@ export const emptySubmission: Submission = {
       [0, 0, 0, 0],
     ],
   },
-  returnOnInvestment: { overallImpact: "", outcomeGroups: [], closingStatement: "" },
+  returnOnInvestment: { overallImpact: "", outcomeGroups: [{ title: "", points: "" }], closingStatement: "" },
   contact: { name: "", email: "", link: "" },
 };

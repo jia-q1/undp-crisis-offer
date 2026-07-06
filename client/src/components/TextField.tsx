@@ -1,4 +1,5 @@
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
+import { countWords } from "@undp-crisis-offer/shared";
 import { FieldShell } from "./FieldShell";
 import { getErrorMessage } from "../form/errors";
 
@@ -51,12 +52,20 @@ export function NumberField({ name, label, example, placeholder }: NumberFieldPr
   );
 }
 
-export function TextAreaField({ name, label, example, placeholder }: TextFieldProps) {
+interface TextAreaFieldProps extends TextFieldProps {
+  maxWords?: number;
+}
+
+export function TextAreaField({ name, label, example, placeholder, maxWords }: TextAreaFieldProps) {
   const {
     register,
+    control,
     formState: { errors },
   } = useFormContext();
   const error = getErrorMessage(errors, name);
+  const value = useWatch({ control, name }) as string | undefined;
+  const wordCount = countWords(value || "");
+  const overLimit = maxWords != null && wordCount > maxWords;
 
   return (
     <FieldShell label={label} example={example} error={error}>
@@ -66,6 +75,11 @@ export function TextAreaField({ name, label, example, placeholder }: TextFieldPr
         {...register(name)}
         className="w-full resize-y rounded-lg border border-slate-300 px-4 py-3 text-base leading-relaxed text-slate-900 shadow-sm outline-none transition focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
       />
+      {maxWords != null && (
+        <p className={`mt-1.5 text-right text-xs ${overLimit ? "font-semibold text-rose-600" : "text-slate-400"}`}>
+          {wordCount} / {maxWords} words
+        </p>
+      )}
     </FieldShell>
   );
 }

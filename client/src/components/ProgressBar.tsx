@@ -1,5 +1,6 @@
 import { SECTIONS } from "../form/sections";
 import { firstStepIndexForSection } from "../form/steps";
+import undpLogo from "../assets/undp_logo.png";
 
 interface ProgressBarProps {
   currentSectionId: string;
@@ -13,8 +14,9 @@ export function ProgressBar({ currentSectionId, percent, maxStepIndex, onSection
 
   return (
     <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-6 pt-5">
-        <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-7xl px-6 pt-4">
+        <div className="mb-3 flex items-center gap-6">
+          <img src={undpLogo} alt="UNDP" className="h-9 w-auto shrink-0" />
           <div className="hidden flex-1 flex-nowrap items-center gap-x-4 overflow-x-auto sm:flex">
             {SECTIONS.map((section, i) => {
               const unlocked = firstStepIndexForSection(section.id) <= maxStepIndex;
