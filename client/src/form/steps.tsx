@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { TextField, TextAreaField, NumberField } from "../components/TextField";
+import { TextField, TextAreaField } from "../components/TextField";
 import { RepeatableIndicatorList } from "../components/RepeatableIndicatorList";
 import { OfferTableEditor } from "../components/OfferTableEditor";
 import { InvestmentTableEditor } from "../components/InvestmentTableEditor";
@@ -89,22 +89,6 @@ function OfferTableStep() {
   return <OfferTableEditor />;
 }
 
-function InvestmentNarrativeStep() {
-  return (
-    <>
-      <NumberField name="investment.totalAmountUsdMillions" label="Total investment needed (US$ millions)" example="350" />
-      <TextField name="investment.durationLabel" label="Duration" example="over three years (mid-2026 to mid-2029)" />
-      <TextField name="investment.districtsLabel" label="Number of districts" example="200-250" />
-      <TextField name="investment.provincesLabel" label="Provinces" example="24 provinces" />
-      <TextAreaField
-        name="investment.selectionCriteria"
-        label="How will priority areas be selected?"
-        example="These will be selected based on return pressures, poverty, service deficits, climate and disaster risks..."
-      />
-    </>
-  );
-}
-
 function InvestmentTableStep() {
   return <InvestmentTableEditor />;
 }
@@ -142,11 +126,8 @@ export const STEPS: StepDef[] = [
   { id: "results", sectionId: "situation", heading: "Results speak for themselves", helper: "Add 3 to 6 results, with at least one concrete example.", fields: ["situation.results"], Component: ResultsStep },
   { id: "advantage", sectionId: "advantage", heading: "UNDP's advantage", fields: ["advantage.narrative"], Component: AdvantageStep },
   { id: "offerIntro", sectionId: "offer", heading: "The offer: introduction", fields: ["offer.intro"], Component: OfferIntroStep },
-  { id: "offerBlocks", sectionId: "offer", heading: "The offer: operational model", helper: "Fill in the blank column, and add more columns as needed.", fields: ["offer.columnLabels", "offer.rows"], Component: OfferTableStep },
-  { id: "investmentNarrative", sectionId: "investment", heading: "The investment", fields: [
-      "investment.totalAmountUsdMillions", "investment.durationLabel", "investment.districtsLabel", "investment.provincesLabel", "investment.selectionCriteria",
-    ], Component: InvestmentNarrativeStep },
-  { id: "investmentTable", sectionId: "investment", heading: "Indicative investment allocation", helper: "Totals are calculated automatically.", fields: ["investment.periodLabels", "investment.rows"], Component: InvestmentTableStep },
+  { id: "offerBlocks", sectionId: "offer", heading: "The offer: operational model", helper: "Name every column before continuing, and add more columns as needed.", fields: ["offer.columnLabels", "offer.rows"], Component: OfferTableStep },
+  { id: "investmentTable", sectionId: "investment", heading: "Indicative investment allocation", helper: "Add each offer under the relevant component. Totals are calculated automatically.", fields: ["investment.rows"], Component: InvestmentTableStep },
   { id: "roi", sectionId: "roi", heading: "What success looks like in 24-36 months", fields: [
       "returnOnInvestment.overallImpact", "returnOnInvestment.outcomeGroups",
     ], Component: RoiStep },

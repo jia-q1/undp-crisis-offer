@@ -54,8 +54,9 @@ All live in `api/.env` locally, or as Vercel project environment variables in pr
 | Variable | Enables |
 |---|---|
 | `DATABASE_URL` | Postgres connection (required) |
-| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Microsoft Graph API access (SharePoint upload + email) |
-| `SHAREPOINT_SITE_ID`, `SHAREPOINT_FOLDER_PATH` | Uploading PDFs to SharePoint instead of just Postgres |
+| `POWER_AUTOMATE_UPLOAD_URL` | Uploading PDFs to SharePoint via an HTTP-triggered Power Automate flow — no Azure AD app registration needed. Takes priority over the Graph API path if both are set. |
+| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Microsoft Graph API access (SharePoint upload if `POWER_AUTOMATE_UPLOAD_URL` isn't set, plus email) |
+| `SHAREPOINT_SITE_ID`, `SHAREPOINT_FOLDER_PATH` | Uploading PDFs to SharePoint via direct Graph API instead of just Postgres |
 | `GRAPH_SENDER_EMAIL`, `INTERNAL_NOTIFY_EMAIL` | Sending the confirmation email |
 
 ## Deployment (Vercel)
@@ -70,5 +71,5 @@ Both projects' `vercel.json` files handle the npm-workspaces build order automat
 ## Current status
 
 - ✅ Form, PDF generation, and Postgres storage: fully working
-- ⏳ SharePoint upload: `SharePointPdfStorage` (Graph API) is built and auto-activates once the Azure AD env vars above are set. A Power Automate–based upload path (using an HTTP-triggered flow instead of direct Graph API access) has been discussed but is not yet implemented.
+- ✅ SharePoint upload via Power Automate: `PowerAutomatePdfStorage` posts the PDF to an HTTP-triggered flow and auto-activates once `POWER_AUTOMATE_UPLOAD_URL` is set — no Azure AD app registration needed. `SharePointPdfStorage` (direct Graph API) remains as a fallback if you'd rather use that path instead.
 - ⏳ Confirmation email: code is ready and auto-activates once Graph API mail credentials are configured

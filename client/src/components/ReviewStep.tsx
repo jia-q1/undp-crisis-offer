@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { OFFER_ROWS, computeInvestmentTotals, investmentRowLabel, type Submission } from "@undp-crisis-offer/shared";
+import { INVESTMENT_PERIODS, OFFER_ROWS, computeInvestmentTotals, offerRowTotal, type Submission } from "@undp-crisis-offer/shared";
 
 function ReviewSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -14,7 +14,7 @@ export function ReviewStep() {
   const { control } = useFormContext<Submission>();
   const values = useWatch({ control });
   const submission = values as Submission;
-  const { rowTotals, grandTotal } = computeInvestmentTotals(submission.investment);
+  const { periodTotals, grandTotal } = computeInvestmentTotals(submission.investment);
 
   return (
     <div>
@@ -79,39 +79,38 @@ export function ReviewStep() {
         </div>
       </ReviewSection>
 
-      <ReviewSection title="The investment">
-        <p>
-          US$ {submission.investment?.totalAmountUsdMillions || 0} million {submission.investment?.durationLabel} across{" "}
-          {submission.investment?.districtsLabel} districts in {submission.investment?.provincesLabel}.
-        </p>
-        <p className="whitespace-pre-wrap">{submission.investment?.selectionCriteria}</p>
-        <div className="mt-3 overflow-x-auto">
+      <ReviewSection title="Indicative investment allocation">
+        <div className="mt-1.5 overflow-x-auto">
           <table className="w-full min-w-[600px] border-collapse text-sm">
             <thead>
               <tr className="bg-slate-100">
-                <th className="p-2.5 text-left">Component</th>
-                {submission.investment?.periodLabels?.map((label, i) => (
-                  <th key={i} className="p-2.5">{label}</th>
+                <th className="p-2.5 text-left">Operational component</th>
+                {INVESTMENT_PERIODS.map((period) => (
+                  <th key={period} className="p-2.5">{period}</th>
                 ))}
                 <th className="p-2.5">Total</th>
               </tr>
             </thead>
             <tbody>
-              {submission.investment?.rows?.map((row, i) => {
-                const { context, column } = investmentRowLabel(i, submission.offer?.columnLabels ?? []);
-                return (
-                  <tr key={i} className="border-b border-slate-100">
-                    <td className="p-2.5">{context}: {column}</td>
-                    {row.map((v, j) => (
+              {OFFER_ROWS.map((label, groupIndex) =>
+                submission.investment?.rows?.[groupIndex]?.map((offer, i) => (
+                  <tr key={`${groupIndex}-${i}`} className="border-b border-slate-100">
+                    <td className="p-2.5">
+                      {label}
+                      {offer.label ? `: ${offer.label}` : ""}
+                    </td>
+                    {offer.amounts.map((v, j) => (
                       <td key={j} className="p-2.5 text-center">US${v || 0}m</td>
                     ))}
-                    <td className="p-2.5 text-center font-semibold">US${rowTotals[i]}m</td>
+                    <td className="p-2.5 text-center font-semibold">US${offerRowTotal(offer)}m</td>
                   </tr>
-                );
-              })}
+                ))
+              )}
               <tr className="font-semibold text-un-navy">
                 <td className="p-2.5">Total</td>
-                <td className="p-2.5 text-center" colSpan={4}></td>
+                {periodTotals.map((total, i) => (
+                  <td key={i} className="p-2.5 text-center">US${total}m</td>
+                ))}
                 <td className="p-2.5 text-center">US${grandTotal}m</td>
               </tr>
             </tbody>

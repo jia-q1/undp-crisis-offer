@@ -34,7 +34,13 @@ export function FormWizard() {
 
   async function goNext() {
     const valid = step.fields.length === 0 ? true : await methods.trigger(step.fields as any);
-    if (!valid) return;
+    if (!valid) {
+      requestAnimationFrame(() => {
+        const firstError = document.querySelector(".text-rose-600");
+        firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      return;
+    }
     if (isLastStep) {
       await onSubmit();
     } else {

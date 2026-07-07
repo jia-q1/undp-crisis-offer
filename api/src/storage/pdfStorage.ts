@@ -75,9 +75,46 @@ export class SharePointPdfStorage implements PdfStorage {
   }
 }
 
+/**
+ * Uploads via an HTTP-triggered Power Automate flow instead of direct Graph
+ * API access — no Azure AD app registration or admin consent required, since
+ * the flow runs under whichever account was used to build it. The flow is
+ * expected to accept `{ fileName, contentBase64 }` and respond with
+ * `{ webUrl }` pointing at the uploaded file. See api/.env.example.
+ */
+export class PowerAutomatePdfStorage implements PdfStorage {
+  constructor(private flowUrl: string) {}
+
+  async store(fileName: string, pdfBytes: Buffer): Promise<PdfStorageResult> {
+    const res = await fetch(this.flowUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName, contentBase64: pdfBytes.toString("base64") }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Power Automate upload failed (${res.status}): ${body}`);
+    }
+
+    const json = (await res.json()) as { webUrl: string };
+    return { backend: "SHAREPOINT", url: json.webUrl };
+  }
+}
+
 export function getPdfStorage(): PdfStorage {
-  const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, SHAREPOINT_SITE_ID, SHAREPOINT_FOLDER_PATH } =
-    process.env;
+  const {
+    POWER_AUTOMATE_UPLOAD_URL,
+    AZURE_TENANT_ID,
+    AZURE_CLIENT_ID,
+    AZURE_CLIENT_SECRET,
+    SHAREPOINT_SITE_ID,
+    SHAREPOINT_FOLDER_PATH,
+  } = process.env;
+
+  if (POWER_AUTOMATE_UPLOAD_URL) {
+    return new PowerAutomatePdfStorage(POWER_AUTOMATE_UPLOAD_URL);
+  }
 
   if (AZURE_TENANT_ID && AZURE_CLIENT_ID && AZURE_CLIENT_SECRET && SHAREPOINT_SITE_ID) {
     return new SharePointPdfStorage({

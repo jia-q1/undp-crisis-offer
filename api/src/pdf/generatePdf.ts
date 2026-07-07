@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { OFFER_ROWS, Submission, computeInvestmentTotals, investmentRowLabel } from "@undp-crisis-offer/shared";
+import { INVESTMENT_PERIODS, OFFER_ROWS, Submission, computeInvestmentTotals, offerRowTotal } from "@undp-crisis-offer/shared";
 import { PdfLayout } from "./layout";
 
 const CCAA_IMAGE_PATH = path.join(__dirname, "assets", "CCAA.png");
@@ -53,20 +53,19 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
 
   // 4) The investment
   layout.sectionHeading("4) The Investment");
-  layout.paragraph(
-    `Delivering this integrated area-based approach in ${submission.investment.districtsLabel} priority districts in ${submission.investment.provincesLabel} will require US$ ${submission.investment.totalAmountUsdMillions} million ${submission.investment.durationLabel}.`
-  );
-  layout.paragraph(submission.investment.selectionCriteria);
   layout.subHeading("Indicative Investment Allocation");
 
-  const { rowTotals, columnTotals, grandTotal } = computeInvestmentTotals(submission.investment);
+  const { periodTotals, grandTotal } = computeInvestmentTotals(submission.investment);
   const fmt = (n: number) => `US$${n}m`;
-  const headers = ["Operational component", ...submission.investment.periodLabels, "Total"];
-  const rows = submission.investment.rows.map((row, i) => {
-    const { context, column } = investmentRowLabel(i, submission.offer.columnLabels);
-    return [`${context}: ${column}`, ...row.map(fmt), fmt(rowTotals[i])];
-  });
-  rows.push(["Total", ...columnTotals.map(fmt), fmt(grandTotal)]);
+  const headers = ["Operational component", ...INVESTMENT_PERIODS, "Total"];
+  const rows = OFFER_ROWS.flatMap((label, groupIndex) =>
+    submission.investment.rows[groupIndex].map((offer) => [
+      offer.label ? `${label}: ${offer.label}` : label,
+      ...offer.amounts.map(fmt),
+      fmt(offerRowTotal(offer)),
+    ])
+  );
+  rows.push(["Total", ...periodTotals.map(fmt), fmt(grandTotal)]);
   layout.table(headers, rows, { boldLastRow: true, boldLastCol: true });
 
   // 5) Return on investment
