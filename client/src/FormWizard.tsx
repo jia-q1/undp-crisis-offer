@@ -141,7 +141,7 @@ export function FormWizard() {
               </button>
             </div>
           </div>
-          {hasReference(step.id) && <div className="hidden w-[480px] shrink-0 lg:block" />}
+          {hasReference(step.id) && <div className="hidden w-[600px] shrink-0 lg:block" />}
         </div>
       </div>
     </FormProvider>
