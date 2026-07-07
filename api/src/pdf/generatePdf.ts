@@ -18,8 +18,7 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
 
   const layout = new PdfLayout(doc, { regular, bold });
 
-  layout.headerImage(ccaaImage);
-  layout.title(`${submission.meta.country} – Investing Beyond Crisis`);
+  layout.headerImage(ccaaImage, submission.meta.country);
   layout.paragraph(
     `Submitted by ${submission.meta.submittedByName}, ${submission.meta.submittedByRole} (${submission.meta.submittedByEmail})`,
     { size: 9 }

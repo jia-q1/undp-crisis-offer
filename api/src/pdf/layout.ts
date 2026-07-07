@@ -80,25 +80,22 @@ export class PdfLayout {
     this.y -= height;
   }
 
-  headerImage(image: PDFImage) {
+  headerImage(image: PDFImage, caption?: string) {
     const width = PAGE_WIDTH;
     const height = (image.height / image.width) * width;
     this.ensureSpace(height);
-    this.page.drawImage(image, { x: 0, y: this.y - height, width, height });
+    const top = this.y;
+    this.page.drawImage(image, { x: 0, y: top - height, width, height });
+    if (caption) {
+      this.page.drawText(caption, {
+        x: MARGIN,
+        y: top - height * 0.9,
+        size: 20,
+        font: this.fonts.bold,
+        color: COLORS.white,
+      });
+    }
     this.spacer(height + 20);
-  }
-
-  title(text: string) {
-    this.ensureSpace(40);
-    this.page.drawText(text, { x: MARGIN, y: this.y - 24, size: 22, font: this.fonts.bold, color: COLORS.navy });
-    this.y -= 40;
-    this.page.drawLine({
-      start: { x: MARGIN, y: this.y },
-      end: { x: PAGE_WIDTH - MARGIN, y: this.y },
-      thickness: 2,
-      color: COLORS.unBlue,
-    });
-    this.spacer(16);
   }
 
   sectionHeading(text: string) {
