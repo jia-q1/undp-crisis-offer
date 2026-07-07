@@ -131,9 +131,9 @@ export const emptySubmission: Submission = {
   },
   investment: {
     rows: [
-      [{ label: "", amounts: [0, 0, 0, 0] }],
-      [{ label: "", amounts: [0, 0, 0, 0] }],
-      [{ label: "", amounts: [0, 0, 0, 0] }],
+      [{ label: "", amounts: [0, 0, 0, 0] }, { label: "", amounts: [0, 0, 0, 0] }],
+      [{ label: "", amounts: [0, 0, 0, 0] }, { label: "", amounts: [0, 0, 0, 0] }],
+      [{ label: "", amounts: [0, 0, 0, 0] }, { label: "", amounts: [0, 0, 0, 0] }],
     ],
   },
   returnOnInvestment: { overallImpact: "", outcomeGroups: [{ title: "", points: "" }], closingStatement: "" },

@@ -4,7 +4,7 @@ import { getErrorMessage } from "../form/errors";
 
 const COLUMN_COUNT = 1 + INVESTMENT_PERIODS.length + 1 + 1; // component + periods + total + remove
 
-function GroupRows({ groupIndex, label }: { groupIndex: number; label: string }) {
+function GroupRows({ groupIndex, label, syncedCount }: { groupIndex: number; label: string; syncedCount: number }) {
   const {
     register,
     control,
@@ -20,16 +20,23 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
         const base = `investment.rows.${groupIndex}.${rowIdx}` as const;
         const labelError = getErrorMessage(errors, `${base}.label`);
         const rowTotal = offers?.[rowIdx] ? offerRowTotal(offers[rowIdx]) : 0;
+        const isSynced = rowIdx < syncedCount;
         return (
           <tr key={field.id} className="border-b border-slate-100">
             <td className="p-2.5 align-top">
               <div className="text-sm font-semibold text-slate-700">{label}</div>
-              <input
-                placeholder="Name this offer"
-                {...register(`${base}.label` as any)}
-                className="mt-1 w-48 rounded border border-slate-300 px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
-              />
-              {labelError && <p className="mt-1 text-xs font-medium text-rose-600">{labelError}</p>}
+              {isSynced ? (
+                <div className="mt-1 text-sm text-slate-400">{offers?.[rowIdx]?.label || "—"}</div>
+              ) : (
+                <>
+                  <input
+                    placeholder="Name this offer"
+                    {...register(`${base}.label` as any)}
+                    className="mt-1 w-48 rounded border border-slate-300 px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
+                  />
+                  {labelError && <p className="mt-1 text-xs font-medium text-rose-600">{labelError}</p>}
+                </>
+              )}
             </td>
             {[0, 1, 2, 3].map((periodIdx) => (
               <td key={periodIdx} className="p-2.5 text-center">
@@ -45,7 +52,7 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
               US${Number.isFinite(rowTotal) ? rowTotal : 0}m
             </td>
             <td className="p-2.5 text-center">
-              {fields.length > 1 && (
+              {!isSynced && (
                 <button
                   type="button"
                   onClick={() => remove(rowIdx)}
@@ -77,6 +84,7 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
 export function InvestmentTableEditor() {
   const { control } = useFormContext<Submission>();
   const investment = useWatch({ control, name: "investment" });
+  const columnLabels = useWatch({ control, name: "offer.columnLabels" }) ?? [];
   const { periodTotals, grandTotal } = computeInvestmentTotals(investment);
 
   return (
@@ -94,7 +102,7 @@ export function InvestmentTableEditor() {
         </thead>
         <tbody>
           {OFFER_ROWS.map((label, groupIndex) => (
-            <GroupRows key={label} groupIndex={groupIndex} label={label} />
+            <GroupRows key={label} groupIndex={groupIndex} label={label} syncedCount={columnLabels.length} />
           ))}
           <tr className="bg-slate-50 font-semibold text-un-navy">
             <td className="p-3">Total</td>
@@ -108,6 +116,9 @@ export function InvestmentTableEditor() {
           </tr>
         </tbody>
       </table>
+      <p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-400">
+        Rows in gray come from the columns you named in "The offer" step. Use "+ Add offer" to add anything extra.
+      </p>
     </div>
   );
 }
