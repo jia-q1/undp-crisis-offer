@@ -128,3 +128,17 @@ export function getPdfStorage(): PdfStorage {
 
   return new PostgresPdfStorage();
 }
+
+/**
+ * True if an actual SharePoint upload will be attempted (i.e. `getPdfStorage`
+ * won't just return the no-op Postgres backend). Lets callers skip invoking
+ * `store()` entirely — and skip the background work / DB update that go with
+ * it — when there's nothing to do beyond the synchronous Postgres save.
+ */
+export function isBackgroundStorageConfigured(): boolean {
+  const { POWER_AUTOMATE_UPLOAD_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, SHAREPOINT_SITE_ID } =
+    process.env;
+  return Boolean(
+    POWER_AUTOMATE_UPLOAD_URL || (AZURE_TENANT_ID && AZURE_CLIENT_ID && AZURE_CLIENT_SECRET && SHAREPOINT_SITE_ID)
+  );
+}

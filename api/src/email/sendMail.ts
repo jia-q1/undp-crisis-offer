@@ -9,20 +9,54 @@ interface SendMailParams {
 }
 
 /**
- * Sends the confirmation email (with PDF attached) via Microsoft Graph,
- * reusing the same Azure AD app registration as SharePoint storage.
- * Requires application permission Mail.Send + a mailbox to send from
- * (GRAPH_SENDER_EMAIL). No-ops with a console log until configured, so the
- * rest of the flow is testable without Azure AD credentials.
+ * Sends via an HTTP-triggered Power Automate flow instead of direct Graph API
+ * access — no Azure AD app registration or admin consent required. The flow
+ * is expected to accept `{ toEmail, toName, subject, bodyHtml, fileName,
+ * contentBase64 }` and send the mail (e.g. via the Outlook connector).
+ */
+async function sendViaPowerAutomate(flowUrl: string, params: SendMailParams): Promise<{ sent: boolean }> {
+  const res = await fetch(flowUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      toEmail: params.toEmail,
+      toName: params.toName,
+      subject: params.subject,
+      bodyHtml: params.bodyHtml,
+      fileName: params.attachment.fileName,
+      contentBase64: params.attachment.contentBytes.toString("base64"),
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Power Automate email send failed (${res.status}): ${body}`);
+  }
+
+  return { sent: true };
+}
+
+/**
+ * Sends the confirmation email (with PDF attached), preferring an
+ * HTTP-triggered Power Automate flow (POWER_AUTOMATE_EMAIL_URL) if set, then
+ * falling back to direct Microsoft Graph access, reusing the same Azure AD
+ * app registration as SharePoint storage (application permission Mail.Send +
+ * a mailbox to send from, GRAPH_SENDER_EMAIL). No-ops with a console log
+ * until either is configured, so the rest of the flow is testable without
+ * either credential.
  */
 export async function sendSubmissionEmail(params: SendMailParams): Promise<{ sent: boolean }> {
-  const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, GRAPH_SENDER_EMAIL, INTERNAL_NOTIFY_EMAIL } =
+  const { POWER_AUTOMATE_EMAIL_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, GRAPH_SENDER_EMAIL, INTERNAL_NOTIFY_EMAIL } =
     process.env;
+
+  if (POWER_AUTOMATE_EMAIL_URL) {
+    return sendViaPowerAutomate(POWER_AUTOMATE_EMAIL_URL, params);
+  }
 
   if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET || !GRAPH_SENDER_EMAIL) {
     console.log(
-      `[sendSubmissionEmail] Azure AD mail not configured — skipping send to ${params.toEmail}. ` +
-        `Set AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/GRAPH_SENDER_EMAIL to enable.`
+      `[sendSubmissionEmail] Mail not configured — skipping send to ${params.toEmail}. ` +
+        `Set POWER_AUTOMATE_EMAIL_URL, or AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/GRAPH_SENDER_EMAIL, to enable.`
     );
     return { sent: false };
   }
@@ -79,4 +113,13 @@ export async function sendSubmissionEmail(params: SendMailParams): Promise<{ sen
   }
 
   return { sent: true };
+}
+
+/** True if a real send will be attempted (Power Automate or Graph configured). */
+export function isEmailConfigured(): boolean {
+  const { POWER_AUTOMATE_EMAIL_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, GRAPH_SENDER_EMAIL } =
+    process.env;
+  return Boolean(
+    POWER_AUTOMATE_EMAIL_URL || (AZURE_TENANT_ID && AZURE_CLIENT_ID && AZURE_CLIENT_SECRET && GRAPH_SENDER_EMAIL)
+  );
 }

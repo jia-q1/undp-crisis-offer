@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { submissionSchema, emptySubmission, type Submission } from "@undp-crisis-offer/shared";
@@ -13,7 +13,7 @@ interface SubmitResult {
   id: string;
   fileName: string;
   pdfUrl: string;
-  emailSent: boolean;
+  emailWillSend: boolean;
 }
 
 export function FormWizard() {
@@ -27,6 +27,11 @@ export function FormWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
+  // A ref alongside the `submitting` state: state updates aren't synchronous,
+  // so two rapid clicks can both pass the disabled-button check before the
+  // re-render lands. The ref is set immediately, before any await, so a
+  // second concurrent call is caught even within the same tick.
+  const submittingRef = useRef(false);
 
   const step = STEPS[stepIndex];
   const isLastStep = stepIndex === STEPS.length - 1;
@@ -66,11 +71,13 @@ export function FormWizard() {
   }
 
   async function onSubmit() {
-    const valid = await methods.trigger();
-    if (!valid) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const valid = await methods.trigger();
+      if (!valid) return;
       const res = await fetch(apiUrl("/api/submit"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,6 +92,7 @@ export function FormWizard() {
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -94,7 +102,7 @@ export function FormWizard() {
       <SubmittedScreen
         country={methods.getValues("meta.country")}
         pdfUrl={resolveApiUrl(result.pdfUrl)}
-        emailSent={result.emailSent}
+        emailWillSend={result.emailWillSend}
       />
     );
   }

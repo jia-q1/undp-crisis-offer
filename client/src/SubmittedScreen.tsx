@@ -1,10 +1,10 @@
 interface SubmittedScreenProps {
   country: string;
   pdfUrl: string;
-  emailSent: boolean;
+  emailWillSend: boolean;
 }
 
-export function SubmittedScreen({ country, pdfUrl, emailSent }: SubmittedScreenProps) {
+export function SubmittedScreen({ country, pdfUrl, emailWillSend }: SubmittedScreenProps) {
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center justify-center px-6 text-center">
       <div className="mb-7 flex h-16 w-16 items-center justify-center rounded-full bg-un-blue/10">
@@ -15,8 +15,8 @@ export function SubmittedScreen({ country, pdfUrl, emailSent }: SubmittedScreenP
       <h1 className="mb-3 text-3xl font-bold text-un-navy">Thank you for your submission</h1>
       <p className="mb-7 text-base leading-relaxed text-slate-500">
         Your "{country} – Investing Beyond Crisis" offer has been recorded.
-        {emailSent
-          ? " A copy of your PDF has been emailed to you."
+        {emailWillSend
+          ? " A copy of your PDF will be emailed to you shortly."
           : " Email delivery isn't configured yet, but your PDF is ready below."}
       </p>
       <a
