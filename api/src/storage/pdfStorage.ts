@@ -4,8 +4,69 @@ export type PdfStorageResult =
   | { backend: "POSTGRES" }
   | { backend: "SHAREPOINT"; url: string };
 
+/**
+ * Every individual form answer, flattened to plain top-level scalars — for
+ * backends that want to record a fully browsable index (e.g. a SharePoint
+ * list item), not just a PDF. Deliberately flat (no nested arrays/objects):
+ * reality-check/results indicators are capped at the form's own max of 6 and
+ * sent as individually-numbered fields, and the uncapped repeating sections
+ * (offer cells, investment line items, ROI groups) are each rendered as a
+ * single readable text block instead. This means the receiving Power
+ * Automate flow never needs to loop over an array to read this payload.
+ */
+export interface SubmissionRecordMeta {
+  country: string;
+  submittedByName: string;
+  submittedByRole: string;
+  submittedByEmail: string;
+  submittedAt: string; // ISO timestamp
+  totalAmountUsdMillions: number;
+
+  challenge: string;
+  advantageNarrative: string;
+  offerIntro: string;
+  roiOverallImpact: string;
+  roiClosingStatement: string;
+  contactName: string;
+  contactEmail: string;
+  contactLink: string;
+
+  realityCheck1Headline: string;
+  realityCheck1Detail: string;
+  realityCheck2Headline: string;
+  realityCheck2Detail: string;
+  realityCheck3Headline: string;
+  realityCheck3Detail: string;
+  realityCheck4Headline: string;
+  realityCheck4Detail: string;
+  realityCheck5Headline: string;
+  realityCheck5Detail: string;
+  realityCheck6Headline: string;
+  realityCheck6Detail: string;
+
+  result1Headline: string;
+  result1Detail: string;
+  result2Headline: string;
+  result2Detail: string;
+  result3Headline: string;
+  result3Detail: string;
+  result4Headline: string;
+  result4Detail: string;
+  result5Headline: string;
+  result5Detail: string;
+  result6Headline: string;
+  result6Detail: string;
+
+  /** Offer intro + every column/row cell, as readable multi-line text. */
+  offerDetailsText: string;
+  /** Every investment line item + grand total, as readable multi-line text. */
+  investmentDetailsText: string;
+  /** Every return-on-investment group, as readable multi-line text. */
+  roiDetailsText: string;
+}
+
 export interface PdfStorage {
-  store(fileName: string, pdfBytes: Buffer): Promise<PdfStorageResult>;
+  store(fileName: string, pdfBytes: Buffer, meta: SubmissionRecordMeta): Promise<PdfStorageResult>;
 }
 
 /** MVP default: PDF bytes live in the submission row itself. */
@@ -79,17 +140,24 @@ export class SharePointPdfStorage implements PdfStorage {
  * Uploads via an HTTP-triggered Power Automate flow instead of direct Graph
  * API access — no Azure AD app registration or admin consent required, since
  * the flow runs under whichever account was used to build it. The flow is
- * expected to accept `{ fileName, contentBase64 }` and respond with
- * `{ webUrl }` pointing at the uploaded file. See api/.env.example.
+ * expected to accept `{ fileName, contentBase64, country, submittedByName,
+ * submittedByRole, submittedByEmail, totalAmountUsdMillions, submittedAt }`,
+ * upload the file, create a browsable list item from the metadata, and
+ * respond with `{ webUrl }` pointing at the uploaded file. See
+ * api/.env.example.
  */
 export class PowerAutomatePdfStorage implements PdfStorage {
   constructor(private flowUrl: string) {}
 
-  async store(fileName: string, pdfBytes: Buffer): Promise<PdfStorageResult> {
+  async store(fileName: string, pdfBytes: Buffer, meta: SubmissionRecordMeta): Promise<PdfStorageResult> {
     const res = await fetch(this.flowUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName, contentBase64: pdfBytes.toString("base64") }),
+      body: JSON.stringify({
+        fileName,
+        contentBase64: pdfBytes.toString("base64"),
+        ...meta,
+      }),
     });
 
     if (!res.ok) {

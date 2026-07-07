@@ -6,6 +6,8 @@ import { generateSubmissionPdf } from "../pdf/generatePdf";
 import { getPdfStorage, isBackgroundStorageConfigured } from "../storage/pdfStorage";
 import { sendSubmissionEmail, isEmailConfigured } from "../email/sendMail";
 import { buildSubmissionEmailHtml } from "../email/buildEmailHtml";
+import { buildSubmissionPlainText } from "../lib/submissionText";
+import { buildSubmissionRecordMeta } from "../lib/submissionMeta";
 import { withTimeout } from "../lib/withTimeout";
 
 export const submitRouter = Router();
@@ -69,7 +71,14 @@ submitRouter.post("/submit", async (req, res) => {
       if (isBackgroundStorageConfigured()) {
         try {
           const result = await withTimeout(
-            getPdfStorage().store(fileName, pdfBuffer),
+            getPdfStorage().store(
+              fileName,
+              pdfBuffer,
+              buildSubmissionRecordMeta(submission, {
+                totalAmountUsdMillions: grandTotal,
+                submittedAt: record.createdAt.toISOString(),
+              })
+            ),
             BACKGROUND_TASK_TIMEOUT_MS,
             "PDF storage upload"
           );
