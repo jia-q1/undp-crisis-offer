@@ -10,8 +10,8 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
     control,
     formState: { errors },
   } = useFormContext<Submission>();
-  const { fields, append, remove } = useFieldArray({ control, name: `investment.rows.${groupIndex}` });
-  const offers = useWatch({ control, name: `investment.rows.${groupIndex}` });
+  const { fields, append, remove } = useFieldArray({ control, name: `investment.rows.${groupIndex}` as any });
+  const offers = useWatch({ control, name: `investment.rows.${groupIndex}` as any }) as Submission["investment"]["rows"][number] | undefined;
   const listError = getErrorMessage(errors, `investment.rows.${groupIndex}`);
 
   return (
@@ -26,7 +26,7 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
               <div className="text-sm font-semibold text-slate-700">{label}</div>
               <input
                 placeholder="Name this offer"
-                {...register(`${base}.label` as const)}
+                {...register(`${base}.label` as any)}
                 className="mt-1 w-48 rounded border border-slate-300 px-2.5 py-1.5 text-sm text-slate-800 outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
               />
               {labelError && <p className="mt-1 text-xs font-medium text-rose-600">{labelError}</p>}
@@ -36,7 +36,7 @@ function GroupRows({ groupIndex, label }: { groupIndex: number; label: string })
                 <input
                   type="number"
                   step="any"
-                  {...register(`${base}.amounts.${periodIdx}` as const, { valueAsNumber: true })}
+                  {...register(`${base}.amounts.${periodIdx}` as any, { valueAsNumber: true })}
                   className="w-20 rounded border border-slate-300 px-2 py-2 text-center text-sm outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
                 />
               </td>
