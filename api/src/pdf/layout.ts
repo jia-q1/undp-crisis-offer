@@ -80,13 +80,11 @@ export class PdfLayout {
     this.y -= height;
   }
 
-  headerImage(image: PDFImage, maxHeight = 90) {
-    const scale = Math.min(CONTENT_WIDTH / image.width, maxHeight / image.height);
-    const width = image.width * scale;
-    const height = image.height * scale;
+  headerImage(image: PDFImage) {
+    const width = PAGE_WIDTH;
+    const height = (image.height / image.width) * width;
     this.ensureSpace(height);
-    const x = MARGIN + (CONTENT_WIDTH - width) / 2;
-    this.page.drawImage(image, { x, y: this.y - height, width, height });
+    this.page.drawImage(image, { x: 0, y: this.y - height, width, height });
     this.spacer(height + 20);
   }
 

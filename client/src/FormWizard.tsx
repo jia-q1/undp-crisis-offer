@@ -5,8 +5,7 @@ import { submissionSchema, emptySubmission, type Submission } from "@undp-crisis
 import { STEPS, firstStepIndexForSection } from "./form/steps";
 import { SECTIONS } from "./form/sections";
 import { ProgressBar } from "./components/ProgressBar";
-import { ReferencePanel } from "./components/ReferencePanel";
-import { hasReference } from "./form/referenceContent";
+import { DocPagePanel, hasReference } from "./components/DocPagePanel";
 import { SubmittedScreen } from "./SubmittedScreen";
 import { apiUrl, resolveApiUrl } from "./apiBase";
 
@@ -110,7 +109,7 @@ export function FormWizard() {
           {!step.helper && <div className="mb-7" />}
           <StepComponent />
         </div>
-        <ReferencePanel stepId={step.id} />
+        <DocPagePanel stepId={step.id} />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 backdrop-blur">
@@ -136,7 +135,7 @@ export function FormWizard() {
               </button>
             </div>
           </div>
-          {hasReference(step.id) && <div className="hidden w-[320px] shrink-0 lg:block" />}
+          {hasReference(step.id) && <div className="hidden w-[480px] shrink-0 lg:block" />}
         </div>
       </div>
     </FormProvider>

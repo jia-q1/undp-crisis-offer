@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { TextField, TextAreaField, NumberField } from "../components/TextField";
 import { RepeatableIndicatorList } from "../components/RepeatableIndicatorList";
-import { OfferMatrixEditor } from "../components/OfferMatrixEditor";
+import { OfferTableEditor } from "../components/OfferTableEditor";
 import { InvestmentTableEditor } from "../components/InvestmentTableEditor";
 import { ReturnOnInvestmentsEditor } from "../components/ReturnOnInvestmentsEditor";
 import { ReviewStep } from "../components/ReviewStep";
@@ -85,8 +85,8 @@ function OfferIntroStep() {
   );
 }
 
-function OfferBlocksStep() {
-  return <OfferMatrixEditor />;
+function OfferTableStep() {
+  return <OfferTableEditor />;
 }
 
 function InvestmentNarrativeStep() {
@@ -142,7 +142,7 @@ export const STEPS: StepDef[] = [
   { id: "results", sectionId: "situation", heading: "Results speak for themselves", helper: "Add 3 to 6 results, with at least one concrete example.", fields: ["situation.results"], Component: ResultsStep },
   { id: "advantage", sectionId: "advantage", heading: "UNDP's advantage", fields: ["advantage.narrative"], Component: AdvantageStep },
   { id: "offerIntro", sectionId: "offer", heading: "The offer: introduction", fields: ["offer.intro"], Component: OfferIntroStep },
-  { id: "offerBlocks", sectionId: "offer", heading: "The offer: four components", helper: "Prepare & Prevent / Respond & Recover, each across essential services and livelihoods.", fields: ["offer.blocks"], Component: OfferBlocksStep },
+  { id: "offerBlocks", sectionId: "offer", heading: "The offer: operational model", helper: "Fill in the blank column, and add more columns as needed.", fields: ["offer.columnLabels", "offer.rows"], Component: OfferTableStep },
   { id: "investmentNarrative", sectionId: "investment", heading: "The investment", fields: [
       "investment.totalAmountUsdMillions", "investment.durationLabel", "investment.districtsLabel", "investment.provincesLabel", "investment.selectionCriteria",
     ], Component: InvestmentNarrativeStep },

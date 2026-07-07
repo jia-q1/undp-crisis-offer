@@ -6,12 +6,7 @@ import { z } from "zod";
  * the Express API import this so validation never drifts between the two.
  */
 
-export const OFFER_MATRIX = [
-  { phase: "Prepare and Prevent", pillar: "Essential services, infrastructure and local systems" },
-  { phase: "Prepare and Prevent", pillar: "Livelihoods, jobs and economies" },
-  { phase: "Respond and Recover", pillar: "Essential services, infrastructure and local systems" },
-  { phase: "Respond and Recover", pillar: "Livelihoods, jobs and economies" },
-] as const;
+export const OFFER_ROWS = ["Prepare and Prevent", "Respond and Recover", "Transition and Transform"] as const;
 
 export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
@@ -29,10 +24,7 @@ const indicatorItemSchema = z.object({
   detail: z.string().min(1, "Required"),
 });
 
-const offerBlockSchema = z.object({
-  tagline: z.string().min(1, "Required"),
-  description: z.string().min(1, "Required"),
-});
+const offerRowSchema = z.array(z.string().min(1, "Required"));
 
 const outcomeGroupSchema = z.object({
   title: z.string().min(1, "Required"),
@@ -59,7 +51,8 @@ export const submissionSchema = z.object({
 
   offer: z.object({
     intro: longText(500),
-    blocks: z.tuple([offerBlockSchema, offerBlockSchema, offerBlockSchema, offerBlockSchema]),
+    columnLabels: z.array(z.string().min(1, "Required")).min(1, "Add at least one column"),
+    rows: z.tuple([offerRowSchema, offerRowSchema, offerRowSchema]),
   }),
 
   investment: z.object({
@@ -69,12 +62,9 @@ export const submissionSchema = z.object({
     provincesLabel: z.string().min(1, "Required"),
     selectionCriteria: z.string().min(1, "Required"),
     periodLabels: z.tuple([z.string().min(1), z.string().min(1), z.string().min(1), z.string().min(1)]),
-    rows: z.tuple([
-      z.tuple([z.number(), z.number(), z.number(), z.number()]),
-      z.tuple([z.number(), z.number(), z.number(), z.number()]),
-      z.tuple([z.number(), z.number(), z.number(), z.number()]),
-      z.tuple([z.number(), z.number(), z.number(), z.number()]),
-    ]),
+    rows: z
+      .array(z.tuple([z.number(), z.number(), z.number(), z.number()]))
+      .min(1, "Add at least one row"),
   }),
 
   returnOnInvestment: z.object({
@@ -92,8 +82,14 @@ export const submissionSchema = z.object({
 
 export type Submission = z.infer<typeof submissionSchema>;
 export type IndicatorItem = z.infer<typeof indicatorItemSchema>;
-export type OfferBlock = z.infer<typeof offerBlockSchema>;
 export type OutcomeGroup = z.infer<typeof outcomeGroupSchema>;
+
+export function investmentRowLabel(rowIndex: number, offerColumnLabels: readonly string[]) {
+  const numColumns = offerColumnLabels.length || 1;
+  const contextIndex = Math.floor(rowIndex / numColumns);
+  const columnIndex = rowIndex % numColumns;
+  return { context: OFFER_ROWS[contextIndex] ?? "", column: offerColumnLabels[columnIndex] ?? "" };
+}
 
 export function computeInvestmentTotals(investment: Submission["investment"]) {
   const rowTotals = investment.rows.map((row) => row.reduce((a, b) => a + b, 0));
@@ -122,12 +118,8 @@ export const emptySubmission: Submission = {
   advantage: { narrative: "" },
   offer: {
     intro: "",
-    blocks: [
-      { tagline: "", description: "" },
-      { tagline: "", description: "" },
-      { tagline: "", description: "" },
-      { tagline: "", description: "" },
-    ],
+    columnLabels: [""],
+    rows: [[""], [""], [""]],
   },
   investment: {
     totalAmountUsdMillions: 0,
@@ -137,7 +129,6 @@ export const emptySubmission: Submission = {
     selectionCriteria: "",
     periodLabels: ["", "", "", ""],
     rows: [
-      [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],

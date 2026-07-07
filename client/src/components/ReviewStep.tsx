@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { OFFER_MATRIX, computeInvestmentTotals, type Submission } from "@undp-crisis-offer/shared";
+import { OFFER_ROWS, computeInvestmentTotals, investmentRowLabel, type Submission } from "@undp-crisis-offer/shared";
 
 function ReviewSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -55,16 +55,27 @@ export function ReviewStep() {
 
       <ReviewSection title="The offer">
         <p className="whitespace-pre-wrap">{submission.offer?.intro}</p>
-        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {submission.offer?.blocks?.map((block, i) => (
-            <div key={i} className="rounded-lg bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-un-navy">
-                {OFFER_MATRIX[i].phase} / {OFFER_MATRIX[i].pillar}
-              </p>
-              <p className="mt-1.5 font-medium">{block.tagline}</p>
-              <p className="text-slate-600">{block.description}</p>
-            </div>
-          ))}
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[600px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="p-2.5 text-left">Context</th>
+                {submission.offer?.columnLabels?.map((label, i) => (
+                  <th key={i} className="p-2.5 text-left">{label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {OFFER_ROWS.map((label, rowIdx) => (
+                <tr key={label} className="border-b border-slate-100">
+                  <td className="p-2.5 font-medium text-un-navy">{label}</td>
+                  {submission.offer?.rows?.[rowIdx]?.map((cell, colIdx) => (
+                    <td key={colIdx} className="p-2.5 whitespace-pre-wrap">{cell}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </ReviewSection>
 
@@ -86,15 +97,18 @@ export function ReviewStep() {
               </tr>
             </thead>
             <tbody>
-              {submission.investment?.rows?.map((row, i) => (
-                <tr key={i} className="border-b border-slate-100">
-                  <td className="p-2.5">{OFFER_MATRIX[i].phase}: {OFFER_MATRIX[i].pillar}</td>
-                  {row.map((v, j) => (
-                    <td key={j} className="p-2.5 text-center">US${v || 0}m</td>
-                  ))}
-                  <td className="p-2.5 text-center font-semibold">US${rowTotals[i]}m</td>
-                </tr>
-              ))}
+              {submission.investment?.rows?.map((row, i) => {
+                const { context, column } = investmentRowLabel(i, submission.offer?.columnLabels ?? []);
+                return (
+                  <tr key={i} className="border-b border-slate-100">
+                    <td className="p-2.5">{context}: {column}</td>
+                    {row.map((v, j) => (
+                      <td key={j} className="p-2.5 text-center">US${v || 0}m</td>
+                    ))}
+                    <td className="p-2.5 text-center font-semibold">US${rowTotals[i]}m</td>
+                  </tr>
+                );
+              })}
               <tr className="font-semibold text-un-navy">
                 <td className="p-2.5">Total</td>
                 <td className="p-2.5 text-center" colSpan={4}></td>

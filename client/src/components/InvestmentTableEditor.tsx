@@ -1,9 +1,10 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { OFFER_MATRIX, computeInvestmentTotals, type Submission } from "@undp-crisis-offer/shared";
+import { computeInvestmentTotals, investmentRowLabel, type Submission } from "@undp-crisis-offer/shared";
 
 export function InvestmentTableEditor() {
   const { register, control } = useFormContext<Submission>();
   const investment = useWatch({ control, name: "investment" });
+  const columnLabels = useWatch({ control, name: "offer.columnLabels" }) ?? [];
   const { rowTotals, columnTotals, grandTotal } = computeInvestmentTotals(investment);
 
   return (
@@ -25,28 +26,31 @@ export function InvestmentTableEditor() {
           </tr>
         </thead>
         <tbody>
-          {OFFER_MATRIX.map((cell, rowIdx) => (
-            <tr key={rowIdx} className="border-b border-slate-100 last:border-0">
-              <td className="p-4 text-sm font-medium text-slate-700">
-                {cell.phase}
-                <br />
-                <span className="text-slate-400">{cell.pillar}</span>
-              </td>
-              {[0, 1, 2, 3].map((colIdx) => (
-                <td key={colIdx} className="p-2.5 text-center">
-                  <input
-                    type="number"
-                    step="any"
-                    {...register(`investment.rows.${rowIdx}.${colIdx}` as any, { valueAsNumber: true })}
-                    className="w-24 rounded border border-slate-300 px-2.5 py-2 text-center text-base outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
-                  />
+          {(investment?.rows ?? []).map((_, rowIdx) => {
+            const { context, column } = investmentRowLabel(rowIdx, columnLabels);
+            return (
+              <tr key={rowIdx} className="border-b border-slate-100 last:border-0">
+                <td className="p-4 text-sm font-medium text-slate-700">
+                  {context}
+                  <br />
+                  <span className="text-slate-400">{column}</span>
                 </td>
-              ))}
-              <td className="p-2.5 text-center font-semibold text-un-navy">
-                US${Number.isFinite(rowTotals[rowIdx]) ? rowTotals[rowIdx] : 0}m
-              </td>
-            </tr>
-          ))}
+                {[0, 1, 2, 3].map((colIdx) => (
+                  <td key={colIdx} className="p-2.5 text-center">
+                    <input
+                      type="number"
+                      step="any"
+                      {...register(`investment.rows.${rowIdx}.${colIdx}` as any, { valueAsNumber: true })}
+                      className="w-24 rounded border border-slate-300 px-2.5 py-2 text-center text-base outline-none focus:border-un-blue focus:ring-2 focus:ring-un-blue/20"
+                    />
+                  </td>
+                ))}
+                <td className="p-2.5 text-center font-semibold text-un-navy">
+                  US${Number.isFinite(rowTotals[rowIdx]) ? rowTotals[rowIdx] : 0}m
+                </td>
+              </tr>
+            );
+          })}
           <tr className="bg-slate-50 font-semibold text-un-navy">
             <td className="p-4">Total</td>
             {columnTotals.map((total, i) => (

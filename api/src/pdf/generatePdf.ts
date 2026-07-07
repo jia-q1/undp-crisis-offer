@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { OFFER_MATRIX, Submission, computeInvestmentTotals } from "@undp-crisis-offer/shared";
+import { OFFER_ROWS, Submission, computeInvestmentTotals, investmentRowLabel } from "@undp-crisis-offer/shared";
 import { PdfLayout } from "./layout";
 
 const CCAA_IMAGE_PATH = path.join(__dirname, "assets", "CCAA.png");
@@ -27,32 +27,30 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
   layout.spacer(4);
 
   // 1) Situation on the ground
-  layout.sectionHeading("1) The situation on the ground: The challenge and why it matters now");
+  layout.sectionHeading("1) The Situation on the Ground: The Challenge and Why It Matters Now");
   layout.paragraph(submission.situation.challenge);
 
-  layout.subHeading("At a glance");
+  layout.subHeading("At a Glance");
   for (const indicator of submission.situation.realityCheck) {
     layout.bullet(indicator.headline, indicator.detail);
   }
 
-  layout.subHeading("Results speak for themselves");
+  layout.subHeading("Results Speak for Themselves");
   for (const result of submission.situation.results) {
     layout.bullet(result.headline, result.detail);
   }
 
   // 2) UNDP's advantage
-  layout.sectionHeading("2) UNDP's advantage – why UNDP, why now");
+  layout.sectionHeading("2) UNDP's Advantage – Why UNDP, Why Now");
   layout.paragraph(submission.advantage.narrative);
 
   // 3) The offer
-  layout.sectionHeading("3) The offer: What UNDP will do");
+  layout.sectionHeading("3) The Offer: What UNDP Will Do");
   layout.paragraph(submission.offer.intro);
-  submission.offer.blocks.forEach((block, i) => {
-    const { phase, pillar } = OFFER_MATRIX[i];
-    layout.subHeading(`${phase} / ${pillar}`);
-    layout.paragraph(block.tagline, { size: 10.5 });
-    layout.paragraph(block.description);
-  });
+  layout.table(
+    ["Context", ...submission.offer.columnLabels],
+    OFFER_ROWS.map((label, rowIdx) => [label, ...submission.offer.rows[rowIdx]])
+  );
 
   // 4) The investment
   layout.sectionHeading("4) The Investment");
@@ -60,20 +58,20 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
     `Delivering this integrated area-based approach in ${submission.investment.districtsLabel} priority districts in ${submission.investment.provincesLabel} will require US$ ${submission.investment.totalAmountUsdMillions} million ${submission.investment.durationLabel}.`
   );
   layout.paragraph(submission.investment.selectionCriteria);
-  layout.subHeading("Indicative investment allocation");
+  layout.subHeading("Indicative Investment Allocation");
 
   const { rowTotals, columnTotals, grandTotal } = computeInvestmentTotals(submission.investment);
   const fmt = (n: number) => `US$${n}m`;
   const headers = ["Operational component", ...submission.investment.periodLabels, "Total"];
   const rows = submission.investment.rows.map((row, i) => {
-    const { phase, pillar } = OFFER_MATRIX[i];
-    return [`${phase}: ${pillar}`, ...row.map(fmt), fmt(rowTotals[i])];
+    const { context, column } = investmentRowLabel(i, submission.offer.columnLabels);
+    return [`${context}: ${column}`, ...row.map(fmt), fmt(rowTotals[i])];
   });
   rows.push(["Total", ...columnTotals.map(fmt), fmt(grandTotal)]);
   layout.table(headers, rows, { boldLastRow: true, boldLastCol: true });
 
   // 5) Return on investment
-  layout.sectionHeading("5) The Return (of investment): What success will look like in 24–36 months");
+  layout.sectionHeading("5) The Return (of Investment): What Success Will Look Like in 24–36 Months");
   layout.paragraph(submission.returnOnInvestment.overallImpact);
   for (const group of submission.returnOnInvestment.outcomeGroups) {
     layout.subHeading(group.title);
@@ -84,7 +82,7 @@ export async function generateSubmissionPdf(submission: Submission): Promise<Buf
   }
 
   // Contact
-  layout.sectionHeading("For more information");
+  layout.sectionHeading("For More Information");
   const contactLine = submission.contact.link
     ? `${submission.contact.name} — ${submission.contact.email} — ${submission.contact.link}`
     : `${submission.contact.name} — ${submission.contact.email}`;
