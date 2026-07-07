@@ -79,7 +79,7 @@ function OfferIntroStep() {
     <TextAreaField
       name="offer.intro"
       label="Introduce your offer"
-      example="In [Country], UNDP adapts its global beyond crisis framework into a 2x2 operational crisis model tailored to country realities."
+      example="In [Country], UNDP adapts its global beyond crisis framework into..."
       maxWords={500}
     />
   );
