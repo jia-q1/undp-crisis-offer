@@ -63,6 +63,23 @@ export interface SubmissionRecordMeta {
   investmentDetailsText: string;
   /** Every return-on-investment group, as readable multi-line text. */
   roiDetailsText: string;
+
+  /** Human-readable display ID, e.g. "BC_AFGHANISTAN_20260708175847_3GG3UQ". */
+  submissionId: string;
+
+  /**
+   * Present only when the same flow that uploads the PDF should also send
+   * the confirmation email (i.e. no separate email flow is configured) —
+   * see isBackgroundStorageConfigured/isEmailConfigured in submit.ts.
+   */
+  email?: {
+    toAddress: string;
+    toName: string;
+    subject: string;
+    bodyHtml: string;
+    /** Semicolon-separated, ready to drop straight into Outlook's Cc field. */
+    cc: string;
+  };
 }
 
 export interface PdfStorage {
@@ -150,13 +167,22 @@ export class PowerAutomatePdfStorage implements PdfStorage {
   constructor(private flowUrl: string) {}
 
   async store(fileName: string, pdfBytes: Buffer, meta: SubmissionRecordMeta): Promise<PdfStorageResult> {
+    // Flatten `email` to top-level scalar fields rather than sending it as a
+    // nested object — a flat payload is what let the flow avoid looping over
+    // arrays/objects, keep it that way here too.
+    const { email, ...rest } = meta;
     const res = await fetch(this.flowUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fileName,
         contentBase64: pdfBytes.toString("base64"),
-        ...meta,
+        ...rest,
+        emailToAddress: email?.toAddress ?? "",
+        emailToName: email?.toName ?? "",
+        emailSubject: email?.subject ?? "",
+        emailBodyHtml: email?.bodyHtml ?? "",
+        emailCc: email?.cc ?? "",
       }),
     });
 

@@ -8,7 +8,7 @@ function slot(items: { headline: string; detail: string }[], index: number): { h
 
 export function buildSubmissionRecordMeta(
   submission: Submission,
-  opts: { totalAmountUsdMillions: number; submittedAt: string }
+  opts: { totalAmountUsdMillions: number; submittedAt: string; submissionId: string }
 ): SubmissionRecordMeta {
   const rc = submission.situation.realityCheck;
   const rs = submission.situation.results;
@@ -20,6 +20,7 @@ export function buildSubmissionRecordMeta(
     submittedByEmail: submission.meta.submittedByEmail,
     submittedAt: opts.submittedAt,
     totalAmountUsdMillions: opts.totalAmountUsdMillions,
+    submissionId: opts.submissionId,
 
     challenge: submission.situation.challenge,
     advantageNarrative: submission.advantage.narrative,

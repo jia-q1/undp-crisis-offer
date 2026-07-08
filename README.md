@@ -58,7 +58,8 @@ All live in `api/.env` locally, or as Vercel project environment variables in pr
 | `POWER_AUTOMATE_EMAIL_URL` | Sending the confirmation email via an HTTP-triggered Power Automate flow — no Azure AD app registration needed. Takes priority over the Graph API path if both are set. |
 | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Microsoft Graph API access (SharePoint upload if `POWER_AUTOMATE_UPLOAD_URL` isn't set, email if `POWER_AUTOMATE_EMAIL_URL` isn't set) |
 | `SHAREPOINT_SITE_ID`, `SHAREPOINT_FOLDER_PATH` | Uploading PDFs to SharePoint via direct Graph API instead of just Postgres |
-| `GRAPH_SENDER_EMAIL`, `INTERNAL_NOTIFY_EMAIL` | Sending the confirmation email via direct Graph API |
+| `GRAPH_SENDER_EMAIL` | Sending the confirmation email via direct Graph API |
+| `EMAIL_CC_ADDRESSES` | Comma-separated addresses cc'd on every confirmation email (works with either email path) |
 
 ## Deployment (Vercel)
 

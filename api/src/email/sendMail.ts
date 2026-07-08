@@ -8,13 +8,22 @@ interface SendMailParams {
   attachment: { fileName: string; contentBytes: Buffer };
 }
 
+/** Comma-separated EMAIL_CC_ADDRESSES env var, parsed into a clean list. */
+export function getCcAddresses(): string[] {
+  return (process.env.EMAIL_CC_ADDRESSES ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /**
  * Sends via an HTTP-triggered Power Automate flow instead of direct Graph API
  * access — no Azure AD app registration or admin consent required. The flow
- * is expected to accept `{ toEmail, toName, subject, bodyHtml, fileName,
- * contentBase64 }` and send the mail (e.g. via the Outlook connector).
+ * is expected to accept `{ toEmail, toName, subject, bodyHtml, cc, fileName,
+ * contentBase64 }` (cc is a single semicolon-separated string, ready to drop
+ * straight into Outlook's "Cc" field) and send the mail.
  */
-async function sendViaPowerAutomate(flowUrl: string, params: SendMailParams): Promise<{ sent: boolean }> {
+async function sendViaPowerAutomate(flowUrl: string, params: SendMailParams, cc: string[]): Promise<{ sent: boolean }> {
   const res = await fetch(flowUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -23,6 +32,7 @@ async function sendViaPowerAutomate(flowUrl: string, params: SendMailParams): Pr
       toName: params.toName,
       subject: params.subject,
       bodyHtml: params.bodyHtml,
+      cc: cc.join(";"),
       fileName: params.attachment.fileName,
       contentBase64: params.attachment.contentBytes.toString("base64"),
     }),
@@ -37,20 +47,21 @@ async function sendViaPowerAutomate(flowUrl: string, params: SendMailParams): Pr
 }
 
 /**
- * Sends the confirmation email (with PDF attached), preferring an
- * HTTP-triggered Power Automate flow (POWER_AUTOMATE_EMAIL_URL) if set, then
- * falling back to direct Microsoft Graph access, reusing the same Azure AD
- * app registration as SharePoint storage (application permission Mail.Send +
- * a mailbox to send from, GRAPH_SENDER_EMAIL). No-ops with a console log
- * until either is configured, so the rest of the flow is testable without
- * either credential.
+ * Sends the confirmation email (with PDF attached) to the submitter, cc'ing
+ * whoever is listed in EMAIL_CC_ADDRESSES. Prefers an HTTP-triggered Power
+ * Automate flow (POWER_AUTOMATE_EMAIL_URL) if set, then falls back to direct
+ * Microsoft Graph access, reusing the same Azure AD app registration as
+ * SharePoint storage (application permission Mail.Send + a mailbox to send
+ * from, GRAPH_SENDER_EMAIL). No-ops with a console log until either is
+ * configured, so the rest of the flow is testable without either credential.
  */
 export async function sendSubmissionEmail(params: SendMailParams): Promise<{ sent: boolean }> {
-  const { POWER_AUTOMATE_EMAIL_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, GRAPH_SENDER_EMAIL, INTERNAL_NOTIFY_EMAIL } =
+  const { POWER_AUTOMATE_EMAIL_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, GRAPH_SENDER_EMAIL } =
     process.env;
+  const cc = getCcAddresses();
 
   if (POWER_AUTOMATE_EMAIL_URL) {
-    return sendViaPowerAutomate(POWER_AUTOMATE_EMAIL_URL, params);
+    return sendViaPowerAutomate(POWER_AUTOMATE_EMAIL_URL, params, cc);
   }
 
   if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET || !GRAPH_SENDER_EMAIL) {
@@ -73,16 +84,12 @@ export async function sendSubmissionEmail(params: SendMailParams): Promise<{ sen
   });
   if (!token?.accessToken) throw new Error("Failed to acquire Graph API token for mail");
 
-  const recipients = [{ emailAddress: { address: params.toEmail, name: params.toName } }];
-  if (INTERNAL_NOTIFY_EMAIL) {
-    recipients.push({ emailAddress: { address: INTERNAL_NOTIFY_EMAIL, name: "UNDP Crisis Offers" } });
-  }
-
   const message = {
     message: {
       subject: params.subject,
       body: { contentType: "HTML", content: params.bodyHtml },
-      toRecipients: recipients,
+      toRecipients: [{ emailAddress: { address: params.toEmail, name: params.toName } }],
+      ccRecipients: cc.map((address) => ({ emailAddress: { address } })),
       attachments: [
         {
           "@odata.type": "#microsoft.graph.fileAttachment",

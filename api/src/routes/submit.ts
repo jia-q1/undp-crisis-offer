@@ -4,10 +4,10 @@ import { submissionSchema, computeInvestmentTotals } from "@undp-crisis-offer/sh
 import { prisma } from "../db/prisma";
 import { generateSubmissionPdf } from "../pdf/generatePdf";
 import { getPdfStorage, isBackgroundStorageConfigured } from "../storage/pdfStorage";
-import { sendSubmissionEmail, isEmailConfigured } from "../email/sendMail";
-import { buildSubmissionEmailHtml } from "../email/buildEmailHtml";
-import { buildSubmissionPlainText } from "../lib/submissionText";
+import { sendSubmissionEmail, isEmailConfigured, getCcAddresses } from "../email/sendMail";
+import { buildConfirmationEmailHtml } from "../email/buildEmailHtml";
 import { buildSubmissionRecordMeta } from "../lib/submissionMeta";
+import { buildSubmissionDisplayId } from "../lib/submissionId";
 import { withTimeout } from "../lib/withTimeout";
 
 export const submitRouter = Router();
@@ -52,7 +52,12 @@ submitRouter.post("/submit", async (req, res) => {
     },
   });
 
-  const emailWillSend = isEmailConfigured();
+  // A dedicated email path (its own Power Automate flow, or direct Graph)
+  // takes priority; otherwise, if the SharePoint upload flow is configured,
+  // fold the email into that same flow/call rather than needing a second one.
+  const dedicatedEmailConfigured = isEmailConfigured();
+  const combineEmailWithStorage = !dedicatedEmailConfigured && isBackgroundStorageConfigured();
+  const emailWillSend = dedicatedEmailConfigured || combineEmailWithStorage;
 
   res.status(201).json({
     id: record.id,
@@ -68,17 +73,33 @@ submitRouter.post("/submit", async (req, res) => {
   // Postgres-only / unemailed — both of which are already fine fallbacks.
   waitUntil(
     (async () => {
+      const submissionId = buildSubmissionDisplayId(submission.meta.country, record.createdAt);
+      const subject = `Your submission: ${submission.meta.country} – Investing Beyond Crisis`;
+      const bodyHtml = buildConfirmationEmailHtml({
+        name: submission.meta.submittedByName,
+        country: submission.meta.country,
+        submissionId,
+      });
+
       if (isBackgroundStorageConfigured()) {
         try {
+          const meta = buildSubmissionRecordMeta(submission, {
+            totalAmountUsdMillions: grandTotal,
+            submittedAt: record.createdAt.toISOString(),
+            submissionId,
+          });
+          if (combineEmailWithStorage) {
+            meta.email = {
+              toAddress: submission.meta.submittedByEmail,
+              toName: submission.meta.submittedByName,
+              subject,
+              bodyHtml,
+              cc: getCcAddresses().join(";"),
+            };
+          }
+
           const result = await withTimeout(
-            getPdfStorage().store(
-              fileName,
-              pdfBuffer,
-              buildSubmissionRecordMeta(submission, {
-                totalAmountUsdMillions: grandTotal,
-                submittedAt: record.createdAt.toISOString(),
-              })
-            ),
+            getPdfStorage().store(fileName, pdfBuffer, meta),
             BACKGROUND_TASK_TIMEOUT_MS,
             "PDF storage upload"
           );
@@ -88,19 +109,25 @@ submitRouter.post("/submit", async (req, res) => {
               data: { pdfStorageBackend: "SHAREPOINT", pdfSharePointUrl: result.url },
             });
           }
+          if (combineEmailWithStorage) {
+            // The flow's own response only confirms {webUrl}, not whether its
+            // email step specifically succeeded — but the call succeeding is
+            // the best signal available without a richer response contract.
+            await prisma.submission.update({ where: { id: record.id }, data: { emailSentAt: new Date() } });
+          }
         } catch (err) {
           console.error("Background PDF storage upload failed (Postgres copy still available)", err);
         }
       }
 
-      if (emailWillSend) {
+      if (dedicatedEmailConfigured) {
         try {
           const result = await withTimeout(
             sendSubmissionEmail({
               toEmail: submission.meta.submittedByEmail,
               toName: submission.meta.submittedByName,
-              subject: `Your submission: ${submission.meta.country} – Investing Beyond Crisis`,
-              bodyHtml: buildSubmissionEmailHtml(submission),
+              subject,
+              bodyHtml,
               attachment: { fileName, contentBytes: pdfBuffer },
             }),
             BACKGROUND_TASK_TIMEOUT_MS,
