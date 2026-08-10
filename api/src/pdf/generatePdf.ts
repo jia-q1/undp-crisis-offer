@@ -1,18 +1,31 @@
 import fs from "fs";
 import path from "path";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import { INVESTMENT_PERIODS, OFFER_ROWS, Submission, computeInvestmentTotals, offerRowTotal } from "@undp-crisis-offer/shared";
 import { PdfLayout } from "./layout";
 
 const CCAA_IMAGE_PATH = path.join(__dirname, "assets", "CCAA.png");
+// DejaVu Sans instead of pdf-lib's built-in Helvetica: the standard fonts only
+// support WinAnsi (Windows-1252) encoding, which excludes Latin Extended-A
+// characters (e.g. Romanian ș/ț) and Cyrillic/Greek, so any submission with
+// those characters would throw ("WinAnsi cannot encode ...") and lose the
+// whole submission — PDF generation happens before the Postgres save. DejaVu
+// Sans covers Latin Extended, Cyrillic, and Greek; see DejaVuSans-LICENSE.txt.
+const REGULAR_FONT_PATH = path.join(__dirname, "assets", "DejaVuSans.ttf");
+const BOLD_FONT_PATH = path.join(__dirname, "assets", "DejaVuSans-Bold.ttf");
 
 export async function generateSubmissionPdf(submission: Submission): Promise<Buffer> {
   const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
   doc.setTitle(`${submission.meta.country} - Investing Beyond Crisis`);
   doc.setAuthor("UNDP");
 
-  const regular = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  // subset: true embeds only the glyphs actually used instead of the full
+  // ~700KB font file each — keeps the PDF (and the email attachment /
+  // SharePoint upload built from it) close to its original size.
+  const regular = await doc.embedFont(fs.readFileSync(REGULAR_FONT_PATH), { subset: true });
+  const bold = await doc.embedFont(fs.readFileSync(BOLD_FONT_PATH), { subset: true });
   const ccaaImageBytes = fs.readFileSync(CCAA_IMAGE_PATH);
   const ccaaImage = await doc.embedPng(ccaaImageBytes);
 
