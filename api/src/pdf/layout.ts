@@ -99,10 +99,25 @@ export class PdfLayout {
   }
 
   sectionHeading(text: string) {
-    this.ensureSpace(34);
-    this.page.drawRectangle({ x: MARGIN, y: this.y - 20, width: 4, height: 20, color: COLORS.unBlue });
-    this.page.drawText(text, { x: MARGIN + 12, y: this.y - 17, size: 14, font: this.fonts.bold, color: COLORS.navy });
-    this.spacer(30);
+    const indent = 12;
+    const lineHeight = 20;
+    // Unlike subHeading, this used to draw as a single unwrapped line — long
+    // headings (e.g. "5) The Return (of Investment): What Success Will Look
+    // Like in 24–36 Months") simply ran off the right edge of the page.
+    const lines = wrapText(text, this.fonts.bold, 14, CONTENT_WIDTH - indent);
+    const blockHeight = lines.length * lineHeight;
+    this.ensureSpace(blockHeight + 10);
+    this.page.drawRectangle({ x: MARGIN, y: this.y - blockHeight, width: 4, height: blockHeight, color: COLORS.unBlue });
+    lines.forEach((line, i) => {
+      this.page.drawText(line, {
+        x: MARGIN + indent,
+        y: this.y - 17 - i * lineHeight,
+        size: 14,
+        font: this.fonts.bold,
+        color: COLORS.navy,
+      });
+    });
+    this.spacer(blockHeight + 10);
   }
 
   subHeading(text: string) {
@@ -176,41 +191,55 @@ export class PdfLayout {
     const firstColWidth = CONTENT_WIDTH * 0.34;
     const otherColWidth = (CONTENT_WIDTH - firstColWidth) / (colCount - 1);
     const colWidths = [firstColWidth, ...Array(colCount - 1).fill(otherColWidth)];
-    const lineHeight = 11;
+    const lineHeight = 10.5;
     const vPad = 10;
+    const size = 9;
 
+    // Cells with a lot of text (common for the offer/investment tables on
+    // real submissions) can be taller than a full page. Rather than drawing
+    // the whole row at once from a single fixed rowTop — which pushes
+    // overflow lines below the bottom margin, off the page and invisible —
+    // this draws as many lines as fit on the current page, then continues
+    // the same row (with fresh cell borders) on the next page.
     const drawRow = (cells: string[], opts2: { header?: boolean; boldRow?: boolean }) => {
-      const size = 9.5;
       const cellLines = cells.map((cell, i) => {
         const font = opts2.header || opts2.boldRow || (opts.boldLastCol && i === cells.length - 1) ? this.fonts.bold : this.fonts.regular;
         return wrapText(cell, font, size, colWidths[i] - 8);
       });
-      const maxLines = Math.max(1, ...cellLines.map((l) => l.length));
-      const rowHeight = maxLines * lineHeight + vPad;
+      const totalLines = Math.max(1, ...cellLines.map((l) => l.length));
 
-      this.ensureSpace(rowHeight);
-      const rowTop = this.y;
-      let x = MARGIN;
-      if (opts2.header) {
-        this.page.drawRectangle({ x: MARGIN, y: rowTop - rowHeight, width: CONTENT_WIDTH, height: rowHeight, color: COLORS.unBlueDark });
+      let drawn = 0;
+      while (drawn < totalLines) {
+        if (this.y - MARGIN < lineHeight + vPad) this.addPage();
+        const availableHeight = this.y - MARGIN;
+        const linesThisPage = Math.max(1, Math.min(totalLines - drawn, Math.floor((availableHeight - vPad) / lineHeight)));
+        const rowHeight = linesThisPage * lineHeight + vPad;
+        const rowTop = this.y;
+
+        let x = MARGIN;
+        if (opts2.header) {
+          this.page.drawRectangle({ x: MARGIN, y: rowTop - rowHeight, width: CONTENT_WIDTH, height: rowHeight, color: COLORS.unBlueDark });
+        }
+        cells.forEach((cell, i) => {
+          const font = opts2.header || opts2.boldRow || (opts.boldLastCol && i === cells.length - 1) ? this.fonts.bold : this.fonts.regular;
+          const color = opts2.header ? COLORS.white : COLORS.text;
+          cellLines[i].slice(drawn, drawn + linesThisPage).forEach((line, li) => {
+            this.page.drawText(line, { x: x + 4, y: rowTop - 13 - li * lineHeight, size, font, color });
+          });
+          this.page.drawRectangle({
+            x,
+            y: rowTop - rowHeight,
+            width: colWidths[i],
+            height: rowHeight,
+            borderColor: COLORS.border,
+            borderWidth: 0.75,
+          });
+          x += colWidths[i];
+        });
+        this.y -= rowHeight;
+        drawn += linesThisPage;
+        if (drawn < totalLines) this.addPage();
       }
-      cells.forEach((cell, i) => {
-        const font = opts2.header || opts2.boldRow || (opts.boldLastCol && i === cells.length - 1) ? this.fonts.bold : this.fonts.regular;
-        const color = opts2.header ? COLORS.white : COLORS.text;
-        cellLines[i].forEach((line, li) => {
-          this.page.drawText(line, { x: x + 4, y: rowTop - 14 - li * lineHeight, size, font, color });
-        });
-        this.page.drawRectangle({
-          x,
-          y: rowTop - rowHeight,
-          width: colWidths[i],
-          height: rowHeight,
-          borderColor: COLORS.border,
-          borderWidth: 0.75,
-        });
-        x += colWidths[i];
-      });
-      this.y -= rowHeight;
     };
 
     drawRow(headers, { header: true });
