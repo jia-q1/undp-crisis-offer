@@ -86,21 +86,32 @@ export type IndicatorItem = z.infer<typeof indicatorItemSchema>;
 export type OutcomeGroup = z.infer<typeof outcomeGroupSchema>;
 export type InvestmentOffer = z.infer<typeof investmentOfferSchema>;
 
+// Amounts are USD millions entered down to the thousands (3 decimal places).
+// Plain floating-point addition drifts past that precision (e.g. 0.1 + 0.2 =
+// 0.30000000000000004), which then rendered directly in the table/PDF as
+// garbage trailing digits. Round every summed total back to the thousands
+// place so it reflects the actual precision of the input data.
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
 export function offerRowTotal(offer: InvestmentOffer): number {
-  return offer.amounts.reduce((a, b) => a + b, 0);
+  return round3(offer.amounts.reduce((a, b) => a + b, 0));
 }
 
 export function computeInvestmentTotals(investment: Submission["investment"]) {
   const groupTotals = investment.rows.map((offers) =>
-    offers.reduce((sum, offer) => sum + offerRowTotal(offer), 0)
+    round3(offers.reduce((sum, offer) => sum + offerRowTotal(offer), 0))
   );
   const periodTotals = [0, 1, 2, 3].map((periodIdx) =>
-    investment.rows.reduce(
-      (sum, offers) => sum + offers.reduce((s, offer) => s + offer.amounts[periodIdx], 0),
-      0
+    round3(
+      investment.rows.reduce(
+        (sum, offers) => sum + offers.reduce((s, offer) => s + offer.amounts[periodIdx], 0),
+        0
+      )
     )
   );
-  const grandTotal = groupTotals.reduce((a, b) => a + b, 0);
+  const grandTotal = round3(groupTotals.reduce((a, b) => a + b, 0));
   return { groupTotals, periodTotals, grandTotal };
 }
 
