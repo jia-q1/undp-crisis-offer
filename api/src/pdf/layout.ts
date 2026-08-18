@@ -21,12 +21,33 @@ export function wrapText(text: string, font: PDFFont, size: number, maxWidth: nu
   let current = "";
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
-    if (font.widthOfTextAtSize(candidate, size) > maxWidth && current) {
-      lines.push(current);
-      current = word;
-    } else {
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
       current = candidate;
+      continue;
     }
+    if (current) {
+      lines.push(current);
+      current = "";
+    }
+    if (font.widthOfTextAtSize(word, size) <= maxWidth) {
+      current = word;
+      continue;
+    }
+    // The word alone is wider than the container — common in narrow
+    // multi-column tables (e.g. "Assessments" in a 5-column offer table)
+    // — so hard-break it character by character instead of letting it
+    // render past the column border into the next cell.
+    let chunk = "";
+    for (const ch of word) {
+      const nextChunk = chunk + ch;
+      if (font.widthOfTextAtSize(nextChunk, size) > maxWidth && chunk) {
+        lines.push(chunk);
+        chunk = ch;
+      } else {
+        chunk = nextChunk;
+      }
+    }
+    current = chunk;
   }
   if (current) lines.push(current);
   return lines.length ? lines : [""];
